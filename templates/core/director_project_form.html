@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ mode }} Project</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="project_create" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title=mode|add:" Project" %}
+
+            <section class="panel form-panel">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="error-box">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="director-form-grid form-vertical">
+                        <div>
+                            <label for="{{ form.serial_number.id_for_label }}">Project Code</label>
+                            {{ form.serial_number }}
+                            {{ form.serial_number.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.website_url.id_for_label }}">Website URL</label>
+                            {{ form.website_url }}
+                            {{ form.website_url.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.initiative_scheme_project_portal.id_for_label }}">Initiative/Scheme/Project Portal</label>
+                            {{ form.initiative_scheme_project_portal }}
+                            {{ form.initiative_scheme_project_portal.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.year.id_for_label }}">Year</label>
+                            {{ form.year }}
+                            {{ form.year.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.project_manager_gis.id_for_label }}">Project Manager - GIS</label>
+                            {{ form.project_manager_gis }}
+                            {{ form.project_manager_gis.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.project_manager_sw_mobi.id_for_label }}">Project Manager - S/W & Mobi</label>
+                            {{ form.project_manager_sw_mobi }}
+                            {{ form.project_manager_sw_mobi.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.start.id_for_label }}">Start Date</label>
+                            {{ form.start }}
+                            {{ form.start.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.end.id_for_label }}">End Date</label>
+                            {{ form.end }}
+                            {{ form.end.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.status.id_for_label }}">Status</label>
+                            {{ form.status }}
+                            {{ form.status.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.stakeholder_ministry.id_for_label }}">Ministry</label>
+                            {{ form.stakeholder_ministry }}
+                            {{ form.stakeholder_ministry.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.stakeholder_department.id_for_label }}">Department</label>
+                            {{ form.stakeholder_department }}
+                            {{ form.stakeholder_department.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.stakeholder_state.id_for_label }}">State</label>
+                            {{ form.stakeholder_state }}
+                            {{ form.stakeholder_state.errors }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.stakeholder_state_ministry_department.id_for_label }}">State Ministry / Department</label>
+                            {{ form.stakeholder_state_ministry_department }}
+                            {{ form.stakeholder_state_ministry_department.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.stakeholder_organization.id_for_label }}">Organization</label>
+                            {{ form.stakeholder_organization }}
+                            {{ form.stakeholder_organization.errors }}
+                        </div>
+                    </div>
+
+                    <div class="form-full">
+                        <label for="{{ form.genesis.id_for_label }}">Genesis</label>
+                        {{ form.genesis }}
+                        {{ form.genesis.errors }}
+                    </div>
+
+                    <div class="custom-fields-box">
+                        <div class="panel-head">
+                            <h3>Custom Fields</h3>
+                            <button type="button" id="addCustomField" class="btn-outline">Add Custom Field</button>
+                        </div>
+                        <div id="customFieldsList">
+                            <div class="custom-row">
+                                <input type="text" placeholder="Field Name (e.g., Budget)">
+                                <input type="text" placeholder="Field Value">
+                                <button type="button" class="btn-remove">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">Save Project</button>
+                        <a href="{% url 'dashboard' %}" class="cancel-btn">Cancel</a>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const addButton = document.getElementById("addCustomField");
+            const list = document.getElementById("customFieldsList");
+
+            function bindRemove(button) {
+                button.addEventListener("click", function () {
+                    const row = this.closest(".custom-row");
+                    if (row) row.remove();
+                });
+            }
+
+            list.querySelectorAll(".btn-remove").forEach(bindRemove);
+
+            addButton.addEventListener("click", function () {
+                const row = document.createElement("div");
+                row.className = "custom-row";
+                row.innerHTML = `
+                    <input type="text" placeholder="Field Name (e.g., Budget)">
+                    <input type="text" placeholder="Field Value">
+                    <button type="button" class="btn-remove">Remove</button>
+                `;
+                list.appendChild(row);
+                bindRemove(row.querySelector(".btn-remove"));
+            });
+        })();
+    </script>
+</body>
+</html>

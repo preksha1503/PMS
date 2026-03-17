@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="contact_us" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Contact Us" topbar_active="contact" %}
+
+            <section class="panel contact-panel">
+                <h2>Contact Support</h2>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="contact-grid">
+                    <div class="contact-info">
+                        <p><strong>Email:</strong> support@bisag-n.com</p>
+                        <p><strong>Phone:</strong> +91 79-0000-0000</p>
+                        <p><strong>Working Hours:</strong> Mon-Sat, 10:30 AM - 6:10 PM</p>
+                    </div>
+                    <form method="post" class="contact-form">
+                        {% csrf_token %}
+                        <label for="name">Your Name</label>
+                        <input id="name" name="name" type="text" required>
+
+                        <label for="email">Your Email</label>
+                        <input id="email" name="email" type="email" required>
+
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+
+                        <button type="submit" class="save-btn">Send Message</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

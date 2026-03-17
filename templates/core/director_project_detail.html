@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="view_projects" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Project Details" %}
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Project #{{ project.serial_number }}</h2>
+                        <p class="assign-subtitle">{{ project.initiative_scheme_project_portal }}</p>
+                    </div>
+                    <div class="list-actions">
+                        <a class="btn-light" href="{% url 'view_projects' %}?q={{ project.serial_number }}">Back to List</a>
+                        {% if user.can_manage_projects %}
+                            <a class="button-link" href="{% url 'project_edit' project.id %}">Edit Project</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>Project Code</th>
+                                <td>{{ project.serial_number }}</td>
+                                <th>Project Name</th>
+                                <td>{{ project.initiative_scheme_project_portal }}</td>
+                            </tr>
+                            <tr>
+                                <th>Website URL</th>
+                                <td><a href="{{ project.website_url }}" target="_blank" rel="noopener">Open</a></td>
+                                <th>Genesis</th>
+                                <td>{{ project.genesis|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Start Date</th>
+                                <td>{{ project.start }}</td>
+                                <th>End Date</th>
+                                <td>{{ project.end }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>{{ project.status }}</td>
+                                <th>Year</th>
+                                <td>{{ project.year }}</td>
+                            </tr>
+                            <tr>
+                                <th>Project Manager - GIS</th>
+                                <td>{{ project.project_manager_gis|default:"-" }}</td>
+                                <th>Project Manager - S/W & Mobile</th>
+                                <td>{{ project.project_manager_sw_mobi|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Stakeholder Ministry</th>
+                                <td>{{ project.stakeholder_ministry|default:"-" }}</td>
+                                <th>Stakeholder Department</th>
+                                <td>{{ project.stakeholder_department|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Stakeholder State</th>
+                                <td>{{ project.stakeholder_state|default:"-" }}</td>
+                                <th>Stakeholder State Ministry/Department</th>
+                                <td>{{ project.stakeholder_state_ministry_department|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Stakeholder Organization</th>
+                                <td colspan="3">{{ project.stakeholder_organization|default:"-" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

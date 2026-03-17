@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role Access</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="role_access" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Role Access" %}
+
+            <section class="panel">
+                <h2>Pending Role Requests</h2>
+                <p class="assign-subtitle">Approve or reject user role requests.</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="table-wrap">
+                    <table class="view-projects-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Requested Role</th>
+                                <th>Assign Role</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in pending_requests %}
+                                <tr>
+                                    <td>{{ req.user.get_full_name|default:req.user.username }}</td>
+                                    <td>{{ req.user.email|default:req.user.username }}</td>
+                                    <td>{{ req.get_requested_role_display }}</td>
+                                    <td>
+                                        <form method="post" class="filter-row single-filter">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="request_id" value="{{ req.id }}">
+                                            <select name="role" required>
+                                                {% for value, label in allowed_roles %}
+                                                    <option value="{{ value }}" {% if value == req.requested_role %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" name="action" value="approve" class="apply-btn">Approve</button>
+                                            <button type="submit" name="action" value="reject" class="btn-light">Reject</button>
+                                        </form>
+                                    </td>
+                                    <td>Pending</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">No pending role requests.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin Dashboard</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="super_admin_dashboard" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Super Admin Dashboard" %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <section class="kpi-grid">
+                <a class="kpi-card kpi-card-link" href="{% url 'role_access' %}">
+                    <h3>Pending Role Requests</h3>
+                    <p class="kpi-value kpi-purple">{{ total_pending_requests }}</p>
+                </a>
+                <a class="kpi-card kpi-card-link" href="{% url 'super_admin_users' %}">
+                    <h3>Total Users</h3>
+                    <p class="kpi-value kpi-blue">{{ total_users }}</p>
+                </a>
+                <a class="kpi-card kpi-card-link" href="{% url 'view_projects' %}">
+                    <h3>Total Projects</h3>
+                    <p class="kpi-value kpi-navy">{{ total_projects }}</p>
+                </a>
+                <a class="kpi-card kpi-card-link" href="{% url 'view_projects' %}?status=completed">
+                    <h3>Completed Projects</h3>
+                    <p class="kpi-value kpi-green">{{ status_counts.completed }}</p>
+                </a>
+                <a class="kpi-card kpi-card-link" href="{% url 'view_projects' %}?status=in_progress">
+                    <h3>In Progress Projects</h3>
+                    <p class="kpi-value kpi-gold">{{ status_counts.in_progress }}</p>
+                </a>
+                <a class="kpi-card kpi-card-link" href="{% url 'view_projects' %}?status=on_hold">
+                    <h3>On Hold Projects</h3>
+                    <p class="kpi-value kpi-red">{{ status_counts.on_hold }}</p>
+                </a>
+            </section>
+
+            <section class="analytics-grid">
+                <article class="panel">
+                    <div class="panel-head">
+                        <h2>Project Overview</h2>
+                        <span class="month-tag">Total {{ total_projects }}</span>
+                    </div>
+                    <div class="pie-wrap">
+                        <div class="pie-chart {% if pie_empty %}pie-empty{% endif %}" style="{{ pie_style|safe }}"></div>
+                        <div class="legend">
+                            <p><span class="dot dot-blue"></span>Pending ({{ status_counts.pending }})</p>
+                            <p><span class="dot dot-gold"></span>In Progress ({{ status_counts.in_progress }})</p>
+                            <p><span class="dot dot-green"></span>Completed ({{ status_counts.completed }})</p>
+                            <p><span class="dot dot-red"></span>On Hold ({{ status_counts.on_hold }})</p>
+                            <p><span class="dot dot-planning"></span>Planning ({{ status_counts.planning }})</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="panel trends-panel">
+                    <div class="trends-head">
+                        <div>
+                            <h2>Monthly Project Trends</h2>
+                            <div class="month-tag trends-month">{{ month_label }}</div>
+                        </div>
+                        <div class="trends-total-card">
+                            <span>Total Projects</span>
+                            <strong>{{ total_projects }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="legend legend-inline trends-legend">
+                        <p><span class="dot dot-planning"></span>Planning</p>
+                        <p><span class="dot dot-blue"></span>Pending</p>
+                        <p><span class="dot dot-gold"></span>In Progress</p>
+                        <p><span class="dot dot-green"></span>Completed</p>
+                        <p><span class="dot dot-red"></span>On Hold</p>
+                    </div>
+
+                    <div class="bars trends-bars">
+                        <div class="bar-col">
+                            <div class="bar-track">
+                                <div class="bar bar-planning" style="--bar-height: {{ bar_heights.planning }}%; --bar-delay: 0ms;"></div>
+                            </div>
+                            <div class="bar-count">{{ status_counts.planning }}</div>
+                            <div class="bar-label">Planning</div>
+                            <div class="bar-percent">{{ bar_heights.planning }}%</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar-track">
+                                <div class="bar bar-pending" style="--bar-height: {{ bar_heights.pending }}%; --bar-delay: 80ms;"></div>
+                            </div>
+                            <div class="bar-count">{{ status_counts.pending }}</div>
+                            <div class="bar-label">Pending</div>
+                            <div class="bar-percent">{{ bar_heights.pending }}%</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar-track">
+                                <div class="bar bar-progress" style="--bar-height: {{ bar_heights.in_progress }}%; --bar-delay: 160ms;"></div>
+                            </div>
+                            <div class="bar-count">{{ status_counts.in_progress }}</div>
+                            <div class="bar-label">In Progress</div>
+                            <div class="bar-percent">{{ bar_heights.in_progress }}%</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar-track">
+                                <div class="bar bar-completed" style="--bar-height: {{ bar_heights.completed }}%; --bar-delay: 240ms;"></div>
+                            </div>
+                            <div class="bar-count">{{ status_counts.completed }}</div>
+                            <div class="bar-label">Completed</div>
+                            <div class="bar-percent">{{ bar_heights.completed }}%</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar-track">
+                                <div class="bar bar-hold" style="--bar-height: {{ bar_heights.on_hold }}%; --bar-delay: 320ms;"></div>
+                            </div>
+                            <div class="bar-count">{{ status_counts.on_hold }}</div>
+                            <div class="bar-label">On Hold</div>
+                            <div class="bar-percent">{{ bar_heights.on_hold }}%</div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | IMS</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="auth-page auth-page-modern">
+    <main class="auth-shell">
+        <section class="auth-card auth-card-modern">
+            <div class="auth-form-header">
+                <img class="auth-card-logo" src="{% static 'core/logo.jpg' %}" alt="BISAG-N Logo">
+                <div>
+                    <h2>Welcome back</h2>
+                    <p>Log in to your dashboard</p>
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="message-error">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" class="auth-form auth-form-modern">
+                {% csrf_token %}
+
+                <div class="auth-field">
+                    <label for="{{ form.username.id_for_label }}">Username (Email)</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="message-error">{{ form.username.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-field">
+                    <label for="{{ form.password.id_for_label }}">Password</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="message-error">{{ form.password.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-actions">
+                    <button type="submit" class="auth-login-btn">Login</button>
+                </div>
+            </form>
+            <p class="auth-switch-link">New user? <a href="{% url 'signup' %}">Create account</a></p>
+            <div class="auth-card-fill">
+                <div class="auth-fill-card">
+                    <h4>Quick tips</h4>
+                    <ul>
+                        <li>Use the sidebar to access projects and assignments.</li>
+                        <li>Notifications show new task updates instantly.</li>
+                        <li>Download Excel reports from View Projects.</li>
+                    </ul>
+                </div>
+                <div class="auth-fill-stats">
+                    <div>
+                        <span>Secure access</span>
+                        <strong>Role based</strong>
+                    </div>
+                    <div>
+                        <span>Real-time</span>
+                        <strong>Updates</strong>
+                    </div>
+                    <div>
+                        <span>Unified</span>
+                        <strong>Dashboard</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <aside class="auth-visual">
+            <div class="auth-visual-card">
+                <div class="auth-visual-header">
+                    <h3>Bhaskaracharya National Institute for Space Applications and Geo-informatics (BISAG-N)</h3>
+                    <p>Manage every project in one place. Track assignments, progress, and team updates faster.</p>
+                </div>
+                <div class="auth-visual-mock">
+                    <div class="mock-sidebar">
+                        <div class="mock-logo">BISAG-N</div>
+                        <div class="mock-item active">Dashboard</div>
+                        <div class="mock-item">Projects</div>
+                        <div class="mock-item">Assignments</div>
+                        <div class="mock-item">Reports</div>
+                        <div class="mock-item">Notifications</div>
+                    </div>
+                    <div class="mock-content">
+                        <div class="mock-card">
+                            <span class="mock-label">Project Overview</span>
+                            <div class="mock-bars">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                        <div class="mock-card large">
+                            <span class="mock-label">Team Progress</span>
+                            <div class="mock-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+</body>
+</html>

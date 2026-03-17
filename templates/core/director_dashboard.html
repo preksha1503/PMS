@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="dashboard" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Dashboard" %}
+
+            {% if show_project_end_popup %}
+            <section class="reminder-banner" id="project-end-reminder">
+                <div class="reminder-icon">!</div>
+                <div class="reminder-body">
+                    <div class="reminder-title">Reminder!</div>
+                    <p>
+                        Project end date reached for {{ project_end_count }} project{{ project_end_count|pluralize }}.
+                        Please review and update status.
+                    </p>
+                    {% if project_end_items %}
+                    <div class="reminder-meta">
+                        {% for project in project_end_items %}
+                            <a class="reminder-link" href="{% url 'project_detail' project.id %}">
+                                #{{ project.serial_number }} {{ project.initiative_scheme_project_portal }} ({{ project.end|date:"d M Y" }})
+                            </a>
+                        {% endfor %}
+                        {% if project_end_more %}
+                            <span>and {{ project_end_more }} more.</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="reminder-actions">
+                    <span class="reminder-date">{{ project_end_today }}</span>
+                    {% if project_end_primary %}
+                        <a class="reminder-action-btn" href="{% url 'project_detail' project_end_primary.id %}">View Project</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'dismiss_project_end_banner' %}">
+                        {% csrf_token %}
+                        <button class="reminder-dismiss" type="submit">Ok</button>
+                    </form>
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="kpi-grid">
+                <article class="kpi-card">
+                    <h3>Pending Projects</h3>
+                    <p class="kpi-value kpi-blue">{{ status_counts.pending }}</p>
+                </article>
+                <article class="kpi-card">
+                    <h3>Completed Projects</h3>
+                    <p class="kpi-value kpi-green">{{ status_counts.completed }}</p>
+                </article>
+                <article class="kpi-card">
+                    <h3>On Hold Projects</h3>
+                    <p class="kpi-value kpi-red">{{ status_counts.on_hold }}</p>
+                </article>
+                <article class="kpi-card">
+                    <h3>In Progress Projects</h3>
+                    <p class="kpi-value kpi-gold">{{ status_counts.in_progress }}</p>
+                </article>
+                <article class="kpi-card">
+                    <h3>Total Users</h3>
+                    <p class="kpi-value kpi-purple">{{ total_users }}</p>
+                </article>
+                <article class="kpi-card">
+                    <h3>Total Projects</h3>
+                    <p class="kpi-value kpi-navy">{{ total_projects }}</p>
+                </article>
+            </section>
+
+            <section class="analytics-grid">
+                <article class="panel">
+                    <div class="panel-head">
+                        <h2>Project Overview</h2>
+                        <span class="month-tag">Total {{ total_projects }}</span>
+                    </div>
+                    <div class="pie-wrap">
+                        <div class="pie-chart {% if pie_empty %}pie-empty{% endif %}" style="{{ pie_style|safe }}"></div>
+                        <div class="legend">
+                            <p><span class="dot dot-blue"></span>Pending ({{ status_counts.pending }})</p>
+                            <p><span class="dot dot-gold"></span>In Progress ({{ status_counts.in_progress }})</p>
+                            <p><span class="dot dot-green"></span>Completed ({{ status_counts.completed }})</p>
+                            <p><span class="dot dot-red"></span>On Hold ({{ status_counts.on_hold }})</p>
+                            <p><span class="dot dot-planning"></span>Planning ({{ status_counts.planning }})</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Monthly Project Trends</h2>
+                            <div class="month-tag">{{ month_label }}</div>
+                        </div>
+                    </div>
+                    <div class="trend-total">{{ total_projects }}</div>
+                    <div class="legend legend-inline">
+                        <p><span class="dot dot-planning"></span>Planning</p>
+                        <p><span class="dot dot-blue"></span>Pending</p>
+                        <p><span class="dot dot-gold"></span>In Progress</p>
+                        <p><span class="dot dot-green"></span>Completed</p>
+                        <p><span class="dot dot-red"></span>On Hold</p>
+                    </div>
+                    <div class="bars">
+                        <div class="bar-col">
+                            <div class="bar bar-planning" style="--bar-height: {{ bar_heights.planning }}%; --bar-delay: 0ms;"></div>
+                            <div class="bar-count">{{ status_counts.planning }}</div>
+                            <div class="bar-label">Planning</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar bar-pending" style="--bar-height: {{ bar_heights.pending }}%; --bar-delay: 80ms;"></div>
+                            <div class="bar-count">{{ status_counts.pending }}</div>
+                            <div class="bar-label">Pending</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar bar-progress" style="--bar-height: {{ bar_heights.in_progress }}%; --bar-delay: 160ms;"></div>
+                            <div class="bar-count">{{ status_counts.in_progress }}</div>
+                            <div class="bar-label">In Progress</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar bar-completed" style="--bar-height: {{ bar_heights.completed }}%; --bar-delay: 240ms;"></div>
+                            <div class="bar-count">{{ status_counts.completed }}</div>
+                            <div class="bar-label">Completed</div>
+                        </div>
+                        <div class="bar-col">
+                            <div class="bar bar-hold" style="--bar-height: {{ bar_heights.on_hold }}%; --bar-delay: 320ms;"></div>
+                            <div class="bar-count">{{ status_counts.on_hold }}</div>
+                            <div class="bar-label">On Hold</div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </div>
+
+</body>
+</html>

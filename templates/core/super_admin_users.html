@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page user-mgmt-page">
+    <div class="director-layout">
+        {% with active_page="super_admin_users" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="User Management" %}
+
+            <section class="panel table-panel user-mgmt-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>All Users</h2>
+                        <p class="dashboard-note user-mgmt-subtitle">Search users and manage roles or access status.</p>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="get" class="filter-row user-mgmt-filter">
+                    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, email, or username">
+                    <select name="role">
+                        <option value="">All Roles</option>
+                        {% for value, label in role_choices %}
+                            <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="apply-btn">Filter</button>
+                </form>
+
+                <div class="table-wrap user-mgmt-table-wrap">
+                    <table class="view-projects-table user-mgmt-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email / Username</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in users %}
+                                <tr>
+                                    <td>
+                                        <div class="user-name-cell">
+                                            <strong>{{ item.get_full_name|default:item.username }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="user-email-cell">
+                                            {{ item.email|default:item.username }}
+                                        </div>
+                                    </td>
+                                    <td><span class="role-chip">{{ item.get_role_display }}</span></td>
+                                    <td class="user-status-cell">
+                                        {% if item.is_active %}
+                                            <span class="status-pill soft-green">Active</span>
+                                        {% else %}
+                                            <span class="status-pill soft-red">Inactive</span>
+                                        {% endif %}
+                                        <form method="post" class="status-toggle-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ item.id }}">
+                                            <button type="submit" name="action" value="toggle_active" class="status-toggle-btn">
+                                                {% if item.is_active %}Deactivate{% else %}Activate{% endif %}
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td class="user-actions-cell">
+                                        <form method="post" class="user-action-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ item.id }}">
+                                            <div class="user-action-top">
+                                                <select name="role" required>
+                                                    {% for value, label in role_choices %}
+                                                        <option value="{{ value }}" {% if item.role == value %}selected{% endif %}>{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="user-action-buttons">
+                                                <button type="submit" name="action" value="set_role" class="apply-btn">Update Role</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">No users found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

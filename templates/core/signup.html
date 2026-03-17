@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | IMS</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="auth-page auth-page-modern auth-page-signup">
+    <main class="auth-shell">
+        <section class="auth-card auth-card-modern">
+            <div class="auth-form-header">
+                <img class="auth-card-logo" src="{% static 'core/logo.jpg' %}" alt="BISAG-N Logo">
+                <div>
+                    <h2>Create Account</h2>
+                    <p>Start managing projects and assignments today.</p>
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="message-error">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" class="auth-form auth-form-modern">
+                {% csrf_token %}
+
+                <div class="auth-field">
+                    <label for="{{ form.full_name.id_for_label }}">Full Name</label>
+                    {{ form.full_name }}
+                    {% if form.full_name.errors %}
+                        <div class="message-error">{{ form.full_name.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-field">
+                    <label for="{{ form.email.id_for_label }}">Email Address</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="message-error">{{ form.email.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-field">
+                    <label for="{{ form.password1.id_for_label }}">Password</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                        <div class="message-error">{{ form.password1.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-field">
+                    <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                        <div class="message-error">{{ form.password2.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-actions">
+                    <button type="submit" class="auth-login-btn">Register</button>
+                </div>
+            </form>
+            <p class="auth-switch-link">Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+            <div class="auth-card-fill">
+                <div class="auth-fill-card">
+                    <h4>Why create an account?</h4>
+                    <ul>
+                        <li>Get access to assigned projects.</li>
+                        <li>Receive instant notifications.</li>
+                        <li>Track progress with dashboards.</li>
+                    </ul>
+                </div>
+                <div class="auth-fill-stats">
+                    <div>
+                        <span>Trusted</span>
+                        <strong>Platform</strong>
+                    </div>
+                    <div>
+                        <span>Fast</span>
+                        <strong>Onboarding</strong>
+                    </div>
+                    <div>
+                        <span>Organized</span>
+                        <strong>Workflow</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <aside class="auth-visual">
+            <div class="auth-visual-card">
+                <div class="auth-visual-header">
+                    <h3>Bhaskaracharya National Institute for Space Applications and Geo-informatics (BISAG-N)</h3>
+                    <p>Plan, assign, and deliver with clarity. Centralize your team’s work with role-based visibility.</p>
+                </div>
+                <div class="auth-visual-mock">
+                    <div class="mock-sidebar">
+                        <div class="mock-logo">BISAG-N</div>
+                        <div class="mock-item active">Dashboard</div>
+                        <div class="mock-item">Projects</div>
+                        <div class="mock-item">Assignments</div>
+                        <div class="mock-item">Teams</div>
+                        <div class="mock-item">Reports</div>
+                    </div>
+                    <div class="mock-content">
+                        <div class="mock-card">
+                            <span class="mock-label">New Assignments</span>
+                            <div class="mock-pill"></div>
+                        </div>
+                        <div class="mock-card large">
+                            <span class="mock-label">Monthly Trends</span>
+                            <div class="mock-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+</body>
+</html>

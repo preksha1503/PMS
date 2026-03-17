@@ -1,0 +1,68 @@
+<header class="director-topbar">
+    <h1>{{ page_title }}</h1>
+    <div class="director-user">
+        <a class="top-action-link{% if topbar_active == 'chat' %} top-action-active{% endif %}" href="{% url 'chat_page' %}">Chat</a>
+        <a class="top-action-link{% if topbar_active == 'help' %} top-action-active{% endif %}" href="{% url 'help_page' %}">Help</a>
+        <a class="top-action-link{% if topbar_active == 'contact' %} top-action-active{% endif %}" href="{% url 'contact_us' %}">Contact Us</a>
+        <a class="notify-btn" href="{% url 'notifications_page' %}" aria-label="Notifications">
+            <svg class="notify-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9a6 6 0 1 1 12 0c0 4 2 5 2 5H4s2-1 2-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9.5 19a2.5 2.5 0 0 0 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            {% if unread_notifications and unread_notifications > 0 %}
+                <span class="notify-count">{{ unread_notifications }}</span>
+            {% endif %}
+        </a>
+        <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+        <div class="topbar-user-meta">
+            <span class="topbar-user-email">{{ user.email|default:user.username }}</span>
+            <span class="topbar-user-role">{{ user.get_role_display|default:"" }}</span>
+        </div>
+    </div>
+</header>
+
+<script>
+    (function() {
+        const notifyBtn = document.querySelector(".notify-btn");
+        if (!notifyBtn) {
+            return;
+        }
+
+        function setBadge(count) {
+            let badge = notifyBtn.querySelector(".notify-count");
+            if (!count || count <= 0) {
+                if (badge) {
+                    badge.remove();
+                }
+                return;
+            }
+            if (!badge) {
+                badge = document.createElement("span");
+                badge.className = "notify-count";
+                notifyBtn.appendChild(badge);
+            }
+            badge.textContent = count;
+        }
+
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const socketUrl = `${wsScheme}://${window.location.host}/ws/notifications/`;
+        let socket;
+
+        try {
+            socket = new WebSocket(socketUrl);
+        } catch (err) {
+            return;
+        }
+
+        socket.onmessage = function(event) {
+            try {
+                const payload = JSON.parse(event.data);
+                if (payload.unread_count !== undefined) {
+                    setBadge(payload.unread_count);
+                }
+            } catch (err) {
+                // Ignore malformed payloads.
+            }
+        };
+    })();
+</script>

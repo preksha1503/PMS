@@ -1,0 +1,217 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Projects</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="view_projects" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="View Projects" %}
+
+            {% if show_project_end_popup %}
+            <section class="reminder-banner" id="project-end-reminder">
+                <div class="reminder-icon">!</div>
+                <div class="reminder-body">
+                    <div class="reminder-title">Reminder!</div>
+                    <p>
+                        Project end date reached for {{ project_end_count }} project{{ project_end_count|pluralize }}.
+                        Please review and update status.
+                    </p>
+                    {% if project_end_items %}
+                    <div class="reminder-meta">
+                        {% for project in project_end_items %}
+                            <a class="reminder-link" href="{% url 'project_detail' project.id %}">
+                                #{{ project.serial_number }} {{ project.initiative_scheme_project_portal }} ({{ project.end|date:"d M Y" }})
+                            </a>
+                        {% endfor %}
+                        {% if project_end_more %}
+                            <span>and {{ project_end_more }} more.</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="reminder-actions">
+                    <span class="reminder-date">{{ project_end_today }}</span>
+                    {% if project_end_primary %}
+                        <a class="reminder-action-btn" href="{% url 'project_detail' project_end_primary.id %}">View Project</a>
+                    {% endif %}
+                    <form method="post" action="{% url 'dismiss_project_end_banner' %}">
+                        {% csrf_token %}
+                        <button class="reminder-dismiss" type="submit">Ok</button>
+                    </form>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if user.role != 'developer' and user.role != 'assistant_project_manager' and user.role != 'pending' %}
+                <section class="view-kpi-grid">
+                    <article class="view-kpi-card">
+                        <h3>Total Projects</h3>
+                        <p class="kpi-value kpi-navy">{{ total_projects }}</p>
+                    </article>
+                    <article class="view-kpi-card soft-blue">
+                        <h3>Pending</h3>
+                        <p class="kpi-value kpi-blue">{{ status_counts.pending }}</p>
+                    </article>
+                    <article class="view-kpi-card soft-purple">
+                        <h3>Planning</h3>
+                        <p class="kpi-value kpi-navy">{{ status_counts.planning }}</p>
+                    </article>
+                    <article class="view-kpi-card soft-yellow">
+                        <h3>In Progress</h3>
+                        <p class="kpi-value kpi-gold">{{ status_counts.in_progress }}</p>
+                    </article>
+                    <article class="view-kpi-card soft-green">
+                        <h3>Completed</h3>
+                        <p class="kpi-value kpi-green">{{ status_counts.completed }}</p>
+                    </article>
+                    <article class="view-kpi-card soft-red">
+                        <h3>On Hold</h3>
+                        <p class="kpi-value kpi-red">{{ status_counts.on_hold }}</p>
+                    </article>
+                </section>
+            {% endif %}
+
+            <section class="panel">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+                <div class="panel-head">
+                    <div>
+                        <h2>Project List</h2>
+                        <p class="assign-subtitle">Showing {{ showing_count }} projects</p>
+                    </div>
+                    <div class="list-actions">
+                        <a class="btn-light" href="{% url 'view_projects' %}">Refresh</a>
+                        <form method="get" action="{% url 'projects_download_excel' %}" class="inline-form" target="_blank">
+                            <input type="hidden" name="q" value="{{ q }}">
+                            <input type="hidden" name="status" value="{{ status_filter }}">
+                            <button type="submit" class="btn-light btn-success">Download Excel</button>
+                        </form>
+                        {% if can_manage %}
+                            <a class="button-link" href="{% url 'project_create' %}">Add Project</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% if user.role != 'developer' and user.role != 'assistant_project_manager' and user.role != 'pending' %}
+                    <form method="get" class="filter-row">
+                        <input type="text" name="q" value="{{ q }}" placeholder="Search by project code, initiative, stakeholder, manager...">
+                        <select name="status">
+                            <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                            <option value="planning" {% if status_filter == 'planning' %}selected{% endif %}>Planning</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="on_hold" {% if status_filter == 'on_hold' %}selected{% endif %}>On Hold</option>
+                        </select>
+                        <button type="submit" class="apply-btn">Apply</button>
+                    </form>
+                {% endif %}
+
+            {% if user.role != 'developer' and user.role != 'assistant_project_manager' and user.role != 'pending' %}
+                    <div class="legend legend-inline compact-legend">
+                        <p><span class="dot dot-planning"></span>Planning</p>
+                        <p><span class="dot dot-blue"></span>Pending</p>
+                        <p><span class="dot dot-gold"></span>In Progress</p>
+                        <p><span class="dot dot-green"></span>Completed</p>
+                        <p><span class="dot dot-red"></span>On Hold</p>
+                    </div>
+                {% endif %}
+
+                <div class="table-wrap table-wrap-scroll">
+                    <table class="view-projects-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Project Code</th>
+                                <th>Project Name</th>
+                                <th>Website URL</th>
+                                <th>Initiative/ Scheme/ Project Portal</th>
+                                <th>Stakeholder</th>
+                                <th>Genesis</th>
+                                <th>Year</th>
+                                <th>Project Manager - GIS</th>
+                                <th>Project Manager - S/W & Mobile</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th>Ministry</th>
+                                <th>Department</th>
+                                <th>State</th>
+                                <th>State Ministry/ Department</th>
+                                <th>Organization</th>
+                                {% if can_manage %}<th>Action</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ project.serial_number }}</td>
+                                    <td>{{ project.initiative_scheme_project_portal }}</td>
+                                    <td><a href="{{ project.website_url }}" target="_blank" rel="noopener">Open</a></td>
+                                    <td>{{ project.initiative_scheme_project_portal }}</td>
+                                    <td>
+                                        {{ project.stakeholder_ministry }}
+                                        {% if project.stakeholder_department %}<br>{{ project.stakeholder_department }}{% endif %}
+                                        {% if project.stakeholder_state %}<br>{{ project.stakeholder_state }}{% endif %}
+                                    </td>
+                                    <td>{{ project.genesis }}</td>
+                                    <td>{{ project.year }}</td>
+                                    <td>{{ project.project_manager_gis }}</td>
+                                    <td>{{ project.project_manager_sw_mobi }}</td>
+                                    <td>{{ project.start }}</td>
+                                    <td>{{ project.end }}</td>
+                                    <td><span class="status-pill">{{ project.status }}</span></td>
+                                    <td>{{ project.stakeholder_ministry }}</td>
+                                    <td>{{ project.stakeholder_department }}</td>
+                                    <td>{{ project.stakeholder_state }}</td>
+                                    <td>{{ project.stakeholder_state_ministry_department }}</td>
+                                    <td>{{ project.stakeholder_organization }}</td>
+                                    {% if can_manage %}
+                                        <td class="action-cell">
+                                            <a href="{% url 'project_edit' project.id %}" class="table-action-btn action-edit" aria-label="Edit project">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M16.862 4.487a2.25 2.25 0 0 1 3.182 3.182L8.25 19.463 4 20l.537-4.25L16.862 4.487Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M15 6l3 3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                            </a>
+                                            <form method="post" action="{% url 'project_delete' project.id %}" class="inline-delete-form">
+                                                {% csrf_token %}
+                                                <button type="submit" class="table-action-btn action-delete" onclick="return confirm('Delete this project?');" aria-label="Delete project">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M4 7h16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                                                        <path d="M10 11v6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                                                        <path d="M14 11v6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="{% if can_manage %}19{% else %}18{% endif %}">No projects found for this filter.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

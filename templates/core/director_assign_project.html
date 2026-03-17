@@ -1,0 +1,75 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default:"Assign Project" }}</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% include "core/sidebar.html" %}
+
+        <div class="director-content">
+            {% with topbar_title=page_title|default:"Assign Project" %}
+                {% include "core/topbar.html" with page_title=topbar_title %}
+            {% endwith %}
+
+            <section class="panel assign-panel">
+                <h2>{{ page_title|default:"Assign Project" }}</h2>
+                <p class="assign-subtitle">Select a project and assign it to a user. Assignment save logic can be connected next.</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="message-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="error-box">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="director-form-grid">
+                        <div>
+                            <label for="{{ form.search_project.id_for_label }}">Search Project</label>
+                            {{ form.search_project }}
+                            <datalist id="projectSuggestions">
+                                {% for p in project_suggestions %}
+                                    <option value="{{ p.serial_number }} - {{ p.initiative_scheme_project_portal }}{% if p.stakeholder_organization %} - {{ p.stakeholder_organization }}{% endif %}"></option>
+                                {% endfor %}
+                            </datalist>
+                            {{ form.search_project.errors }}
+                        </div>
+                        <div>
+                            <label for="{{ form.assigned_to.id_for_label }}">User Email</label>
+                            {{ form.assigned_to }}
+                            {{ form.assigned_to.errors }}
+                        </div>
+                    </div>
+
+                    <div class="form-full">
+                        <label for="{{ form.notes.id_for_label }}">Notes</label>
+                        {{ form.notes }}
+                        {{ form.notes.errors }}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">{{ page_title|default:"Assign Project" }}</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const input = document.getElementById("id_search_project");
+            if (input) {
+                input.setAttribute("list", "projectSuggestions");
+            }
+        })();
+    </script>
+</body>
+</html>

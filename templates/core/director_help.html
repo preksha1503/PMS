@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="help_page" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Help" topbar_active="help" %}
+
+            <section class="panel help-panel">
+                <h2>How Can We Help?</h2>
+                <article class="help-item">
+                    <h3>1. Create Project</h3>
+                    <p>Go to Add Project, fill all required details, and click Save Project.</p>
+                </article>
+                <article class="help-item">
+                    <h3>2. View and Filter Projects</h3>
+                    <p>Open View Projects and use search/status filter to find records quickly.</p>
+                </article>
+                <article class="help-item">
+                    <h3>3. Assign Project</h3>
+                    <p>Open Assign Project, choose a project and employee, then submit assignment.</p>
+                </article>
+                <article class="help-item">
+                    <h3>4. Excel Import</h3>
+                    <p>Use Excel Entry to upload `.xlsx` file and import/update project records.</p>
+                </article>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

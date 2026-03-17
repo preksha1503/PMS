@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Entry</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="excel_entry" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Excel Entry" %}
+
+            <section class="panel excel-panel">
+                <h2>Import Projects From Excel</h2>
+                <p class="assign-subtitle">Upload only Excel files (.xlsx). The system will import project records from the file.</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="form-full">
+                        <label for="excel_file">Excel File</label>
+                        <input type="file" id="excel_file" name="excel_file" accept=".xlsx">
+                        <small class="hint-text">Preview will be shown below after selecting a file.</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">Upload and Import</button>
+                        <a href="{% url 'dashboard' %}" class="cancel-btn">Cancel</a>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

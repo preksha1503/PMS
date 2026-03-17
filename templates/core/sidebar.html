@@ -1,0 +1,39 @@
+<aside class="sidebar">
+    <div>
+        <div class="brand">BISAG-N</div>
+        <nav class="nav-menu">
+            {% if user.role == 'super_admin' or user.is_superuser %}
+                <a class="nav-item {% if active_page == 'super_admin_dashboard' %}nav-item-active{% endif %}" href="{% url 'super_admin_dashboard' %}">Dashboard</a>
+                <a class="nav-item {% if active_page == 'super_admin_users' %}nav-item-active{% endif %}" href="{% url 'super_admin_users' %}">User Management</a>
+                <a class="nav-item {% if active_page == 'project_create' %}nav-item-active{% endif %}" href="{% url 'project_create' %}">Add Project</a>
+                <a class="nav-item {% if active_page == 'view_projects' %}nav-item-active{% endif %}" href="{% url 'view_projects' %}">View Projects</a>
+                <a class="nav-item {% if active_page == 'assign_project' %}nav-item-active{% endif %}" href="{% url 'assign_project' %}">Assign Project</a>
+                <a class="nav-item {% if active_page == 'assigned_to' %}nav-item-active{% endif %}" href="{% url 'assign_to' %}">Assigned To</a>
+                <a class="nav-item {% if active_page == 'excel_entry' %}nav-item-active{% endif %}" href="{% url 'excel_entry' %}">Excel Entry</a>
+                <a class="nav-item {% if active_page == 'role_access' %}nav-item-active{% endif %}" href="{% url 'role_access' %}">Role Access</a>
+                <a class="nav-item {% if active_page == 'profile' %}nav-item-active{% endif %}" href="{% url 'profile' %}">Profile</a>
+            {% elif user.role == 'pending' %}
+                <a class="nav-item {% if active_page == 'role_request' %}nav-item-active{% endif %}" href="{% url 'role_request' %}">Role Request</a>
+                <a class="nav-item {% if active_page == 'profile' %}nav-item-active{% endif %}" href="{% url 'profile' %}">Profile</a>
+            {% elif user.role == 'developer' or user.role == 'assistant_project_manager' %}
+                <a class="nav-item {% if active_page == 'view_projects' %}nav-item-active{% endif %}" href="{% url 'view_projects' %}">View Projects</a>
+                <a class="nav-item {% if active_page == 'role_request' %}nav-item-active{% endif %}" href="{% url 'role_request' %}">Role Request</a>
+                <a class="nav-item {% if active_page == 'profile' %}nav-item-active{% endif %}" href="{% url 'profile' %}">Profile</a>
+            {% else %}
+                <a class="nav-item {% if active_page == 'dashboard' %}nav-item-active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                <a class="nav-item {% if active_page == 'project_create' %}nav-item-active{% endif %}" href="{% url 'project_create' %}">Add Project</a>
+                <a class="nav-item {% if active_page == 'view_projects' %}nav-item-active{% endif %}" href="{% url 'view_projects' %}">View Projects</a>
+                <a class="nav-item {% if active_page == 'assign_project' %}nav-item-active{% endif %}" href="{% url 'assign_project' %}">Assign Project</a>
+                <a class="nav-item {% if active_page == 'assigned_to' %}nav-item-active{% endif %}" href="{% url 'assign_to' %}">Assigned To</a>
+                <a class="nav-item {% if active_page == 'excel_entry' %}nav-item-active{% endif %}" href="{% url 'excel_entry' %}">Excel Entry</a>
+                {% if user.role == 'super_admin' %}
+                    <a class="nav-item {% if active_page == 'role_access' %}nav-item-active{% endif %}" href="{% url 'role_access' %}">Role Access</a>
+                {% else %}
+                    <a class="nav-item {% if active_page == 'role_request' %}nav-item-active{% endif %}" href="{% url 'role_request' %}">Role Request</a>
+                {% endif %}
+                <a class="nav-item {% if active_page == 'profile' %}nav-item-active{% endif %}" href="{% url 'profile' %}">Profile</a>
+            {% endif %}
+        </nav>
+    </div>
+    <a class="logout-btn" href="{% url 'logout' %}">Logout</a>
+</aside>

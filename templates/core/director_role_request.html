@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role Request</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="role_request" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Role Request" %}
+
+            <section class="panel">
+                <h2>Request a Role</h2>
+                <p class="assign-subtitle">Select a role and submit for Super Admin approval.</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if pending_request %}
+                    <div class="message-success">Pending request: {{ pending_request.get_requested_role_display }}</div>
+                {% elif latest_request and latest_request.status == 'rejected' %}
+                    <div class="message-error">Your last request was rejected. Please submit a new request.</div>
+                {% endif %}
+
+                <form method="post" class="filter-row single-filter">
+                    {% csrf_token %}
+                    <select name="requested_role" required>
+                        <option value="">Select role</option>
+                        {% for value, label in allowed_roles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="apply-btn">Submit Request</button>
+                </form>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

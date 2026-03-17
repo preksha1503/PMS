@@ -1,0 +1,69 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="profile" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="My Profile" %}
+
+            <div class="profile-title-row">
+                <div>
+                    <h2>My Profile</h2>
+                    <p class="profile-subtitle">Manage your account information and access details.</p>
+                </div>
+                <a href="{% url 'change_password' %}" class="button-link">Change Password</a>
+            </div>
+
+            <section class="panel profile-panel profile-upgrade">
+                <div class="profile-hero">
+                    <div class="profile-avatar">{{ user.username|slice:":1"|upper }}</div>
+                    <div class="profile-hero-meta">
+                        <h3>{{ profile_name }}</h3>
+                        <p>{{ profile_role|default:"N/A" }}</p>
+                        <div class="profile-tags">
+                            <span class="profile-tag">Active Account</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-grid profile-vertical">
+                    <article class="profile-card">
+                        <span class="profile-label">Email</span>
+                        <strong>{{ email }}</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span class="profile-label">Department</span>
+                        <strong>{{ department }}</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span class="profile-label">Role</span>
+                        <strong>{{ profile_role|default:"N/A" }}</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span class="profile-label">Employee ID</span>
+                        <strong>{{ employee_id }}</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span class="profile-label">Phone</span>
+                        <strong>{{ phone }}</strong>
+                    </article>
+                    <article class="profile-card">
+                        <span class="profile-label">Last Login</span>
+                        <strong>{{ user.last_login|date:"d M Y, h:i A"|default:"N/A" }}</strong>
+                    </article>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

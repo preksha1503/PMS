@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="notifications_page" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Notifications" %}
+
+            <section class="panel notifications-panel">
+                <div class="notifications-head">
+                    <div>
+                        <h2>All Notifications</h2>
+                        <p class="assign-subtitle">
+                            Unread: {{ unread_notifications|default:0 }}
+                        </p>
+                    </div>
+                    <div class="notifications-actions">
+                        <button type="button" class="btn-light" id="markAllBtn">Mark All Read</button>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="notice-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="table-wrap notification-table-wrap">
+                    <table class="notification-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Message</th>
+                                <th>Project</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for notification in notifications %}
+                                <tr class="{% if not notification.is_read %}notification-row-unread{% endif %}" data-id="{{ notification.id }}">
+                                    <td class="notification-title">New Project Assignment</td>
+                                    <td class="notification-message">
+                                        {% if notification.actor %}
+                                            {{ notification.actor.username }} assigned project #{{ notification.target_object_id }} to your role.
+                                        {% else %}
+                                            {{ notification.verb }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="notification-project">
+                                        {% if notification.url %}
+                                            <a href="{{ notification.url }}">View</a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="notification-date">{{ notification.created_at|date:"d M Y, h:i A" }}</td>
+                                    <td>
+                                        <span class="status-pill soft-green">{{ notification.is_read|yesno:"Read,Unread" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if not notification.is_read %}
+                                            <button type="button" class="btn-light notification-read-btn">Mark read</button>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6">No notifications yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const csrftoken = (function() {
+                const name = "csrftoken";
+                const cookies = document.cookie ? document.cookie.split(";") : [];
+                for (let i = 0; i < cookies.length; i += 1) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.startsWith(name + "=")) {
+                        return decodeURIComponent(cookie.substring(name.length + 1));
+                    }
+                }
+                return "";
+            })();
+
+            function updateBadge(count) {
+                const notifyBtn = document.querySelector(".notify-btn");
+                if (!notifyBtn) {
+                    return;
+                }
+                let badge = notifyBtn.querySelector(".notify-count");
+                if (!count || count <= 0) {
+                    if (badge) {
+                        badge.remove();
+                    }
+                    return;
+                }
+                if (!badge) {
+                    badge = document.createElement("span");
+                    badge.className = "notify-count";
+                    notifyBtn.appendChild(badge);
+                }
+                badge.textContent = count;
+            }
+
+            function markRead(card) {
+                const notifId = card.getAttribute("data-id");
+                if (!notifId) {
+                    return;
+                }
+                const urlTemplate = "{% url 'notification_read' 0 %}";
+                const url = urlTemplate.replace("0", notifId);
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrftoken,
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        card.classList.remove("notification-unread");
+                        const btn = card.querySelector(".notification-read-btn");
+                        if (btn) {
+                            btn.remove();
+                        }
+                        if (data.unread_count !== undefined) {
+                            updateBadge(data.unread_count);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            document.querySelectorAll(".notification-read-btn").forEach((btn) => {
+                btn.addEventListener("click", function() {
+                    const card = btn.closest(".notification-item");
+                    if (card) {
+                        markRead(card);
+                    }
+                });
+            });
+
+            const markAllBtn = document.getElementById("markAllBtn");
+            if (markAllBtn) {
+                markAllBtn.addEventListener("click", function() {
+                    fetch("{% url 'notifications_read_all' %}", {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrftoken,
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    })
+                        .then((res) => res.json())
+                        .then((data) => {
+                            document.querySelectorAll(".notification-item").forEach((card) => {
+                                card.classList.remove("notification-unread");
+                                const btn = card.querySelector(".notification-read-btn");
+                                if (btn) {
+                                    btn.remove();
+                                }
+                            });
+                            if (data.unread_count !== undefined) {
+                                updateBadge(data.unread_count);
+                            }
+                        })
+                        .catch(() => {});
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

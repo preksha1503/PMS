@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assigned To</title>
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+</head>
+<body class="director-page">
+    <div class="director-layout">
+        {% with active_page="assign_to" %}
+            {% include "core/sidebar.html" %}
+        {% endwith %}
+
+        <div class="director-content">
+            {% include "core/topbar.html" with page_title="Assigned Projects" %}
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Assign To Details</h2>
+                        <p class="assign-subtitle">Showing {{ total_assignments }} assignment records</p>
+                    </div>
+                    <a class="button-link" href="{% url 'assign_project' %}">Assign New Project</a>
+                </div>
+
+                <form method="get" class="filter-row single-filter assign-to-filter">
+                    <input type="text" name="q" value="{{ q }}" placeholder="Search by project, assignee, assigner, project code or status">
+                    <button type="submit" class="apply-btn">Search</button>
+                    <a href="{% url 'assign_to' %}" class="btn-light">Reset</a>
+                </form>
+
+                <div class="table-wrap">
+                    <table class="view-projects-table">
+                        <thead>
+                            <tr>
+                                <th>Project Code</th>
+                                <th>Project</th>
+                                <th>Assigned Role</th>
+                                <th>Assigned By</th>
+                                <th>Status</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Notes</th>
+                                <th>Assigned At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in assignments %}
+                                <tr>
+                                    <td>{{ item.project.serial_number }}</td>
+                                    <td>{{ item.project.initiative_scheme_project_portal }}</td>
+                                    <td>
+                                        {% if item.assigned_to %}
+                                            {{ item.assigned_to.get_role_display }}
+                                        {% elif item.assigned_role %}
+                                            {{ item.get_assigned_role_display }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.assigned_by.username }}</td>
+                                    <td><span class="status-pill">{{ item.project.status }}</span></td>
+                                    <td>{{ item.project.start }}</td>
+                                    <td>{{ item.project.end }}</td>
+                                    <td>{{ item.notes|default:"-" }}</td>
+                                    <td>{{ item.assigned_at|date:"d M Y, h:i A" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="9">No assigned projects found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>
