@@ -13,6 +13,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+# Load environment variables from .env if python-dotenv is available.
+try:
+    from dotenv import load_dotenv  # type: ignore
+
+    load_dotenv()
+except Exception:
+    pass
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -102,7 +110,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DB_ENGINE = os.getenv('DB_ENGINE', 'mysql')  # mysql or sqlite
 DB_NAME = os.getenv('DB_NAME', 'pms_new')
 DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'preksha@1503')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'mahi1701')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '3306')
 

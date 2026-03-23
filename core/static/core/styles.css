@@ -113,7 +113,14 @@ th {
     border-bottom: 1px solid #b8cdf4;
 }
 
-tr:hover td {
+.view-projects-table tbody tr:hover td,
+.user-mgmt-table tbody tr:hover td,
+.notification-table tbody tr:hover td {
+    background: #f3f6ff;
+}
+
+.detail-table td:hover,
+.detail-table th:hover {
     background: #f3f6ff;
 }
 
