@@ -17,16 +17,40 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_env_file(env_path: Path) -> None:
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+_load_env_file(BASE_DIR / ".env")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5le76lu+93*u!nj^v95!6p!bl-$3(m7cd@*^ir16&tc^!-!wpq'
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "django-insecure-5le76lu+93*u!nj^v95!6p!bl-$3(m7cd@*^ir16&tc^!-!wpq",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = (os.getenv("DEBUG", "True") or "True").strip().lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = []
+allowed_hosts = (os.getenv("ALLOWED_HOSTS") or "").strip()
+if allowed_hosts:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts.split(",") if host.strip()]
+else:
+    ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -63,6 +87,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.unread_notifications',
             ],
         },
     },

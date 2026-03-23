@@ -50,24 +50,22 @@
                         <tbody>
                             {% for notification in notifications %}
                                 <tr class="{% if not notification.is_read %}notification-row-unread{% endif %}" data-id="{{ notification.id }}">
-                                    <td class="notification-title">New Project Assignment</td>
+                                    <td class="notification-title">Notification</td>
                                     <td class="notification-message">
-                                        {% if notification.actor %}
-                                            {{ notification.actor.username }} assigned project #{{ notification.target_object_id }} to your role.
-                                        {% else %}
-                                            {{ notification.verb }}
-                                        {% endif %}
+                                        {{ notification.message }}
                                     </td>
                                     <td class="notification-project">
-                                        {% if notification.url %}
-                                            <a href="{{ notification.url }}">View</a>
+                                        {% if notification.project %}
+                                            <a href="{% url 'project_detail' notification.project.id %}">View</a>
                                         {% else %}
                                             -
                                         {% endif %}
                                     </td>
                                     <td class="notification-date">{{ notification.created_at|date:"d M Y, h:i A" }}</td>
                                     <td>
-                                        <span class="status-pill soft-green">{{ notification.is_read|yesno:"Read,Unread" }}</span>
+                                        <span class="status-pill {% if notification.is_read %}status-completed{% else %}status-pending{% endif %}">
+                                            {{ notification.is_read|yesno:"Read,Unread" }}
+                                        </span>
                                     </td>
                                     <td>
                                         {% if not notification.is_read %}
@@ -139,7 +137,7 @@
                 })
                     .then((res) => res.json())
                     .then((data) => {
-                        card.classList.remove("notification-unread");
+                        card.classList.remove("notification-row-unread");
                         const btn = card.querySelector(".notification-read-btn");
                         if (btn) {
                             btn.remove();
@@ -153,9 +151,9 @@
 
             document.querySelectorAll(".notification-read-btn").forEach((btn) => {
                 btn.addEventListener("click", function() {
-                    const card = btn.closest(".notification-item");
-                    if (card) {
-                        markRead(card);
+                    const row = btn.closest("tr");
+                    if (row) {
+                        markRead(row);
                     }
                 });
             });

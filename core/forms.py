@@ -1,4 +1,6 @@
 from django import forms
+from django.conf import settings
+from django.contrib.auth import authenticate
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import Project, RoleRequest, User
@@ -53,12 +55,53 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].label = "Username (Email)"
+        self.fields["username"].label = "Username or Email"
         self.fields["password"].label = "Password"
 
     class Meta:
         model = User
         fields = ("username", "password")
+
+    def clean(self):
+        username = (self.cleaned_data.get("username") or "").strip()
+        if "@" in username:
+            username = username.lower()
+            self.cleaned_data["username"] = username
+        password = self.cleaned_data.get("password") or ""
+
+        if username and password:
+            lookup_user = None
+            resolved_username = username
+
+            if "@" in username:
+                lookup_user = User.objects.filter(email__iexact=username).only("username", "is_active").first()
+                if lookup_user and lookup_user.username:
+                    resolved_username = lookup_user.username
+            else:
+                lookup_user = User.objects.filter(username__iexact=username).only("username", "is_active").first()
+                if lookup_user and lookup_user.username:
+                    resolved_username = lookup_user.username
+
+            user = authenticate(self.request, username=resolved_username, password=password)
+
+            if user is None:
+                if settings.DEBUG:
+                    db = settings.DATABASES.get("default", {})
+                    db_hint = f" (DB: {db.get('ENGINE', 'unknown')})"
+                    if lookup_user and lookup_user.is_active is False:
+                        raise forms.ValidationError(f"This account is disabled.{db_hint}", code="inactive")
+                    if lookup_user:
+                        raise forms.ValidationError(f"Incorrect password.{db_hint}", code="invalid_password")
+                    raise forms.ValidationError(
+                        f"No account found with that username/email.{db_hint}",
+                        code="unknown_user",
+                    )
+                raise self.get_invalid_login_error()
+
+            self.confirm_login_allowed(user)
+            self.user_cache = user
+
+        return self.cleaned_data
 
 
 class ProjectForm(forms.ModelForm):
@@ -98,22 +141,16 @@ class AssignProjectForm(forms.Form):
             }
         ),
     )
-    assigned_role = forms.ChoiceField(choices=[], required=True)
+    assigned_to = forms.EmailField(
+        label="User Email",
+        widget=forms.EmailInput(
+            attrs={
+                "placeholder": "Enter user email (e.g. user@example.com)",
+                "autocomplete": "off",
+            }
+        ),
+    )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={"rows": 4, "placeholder": "Optional assignment notes..."}),
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        allowed_roles = [
-            User.Role.DIRECTOR,
-            User.Role.PROJECT_DIRECTOR,
-            User.Role.PROJECT_MANAGER,
-            User.Role.ASSISTANT_PROJECT_MANAGER,
-            User.Role.DEVELOPER,
-        ]
-        self.fields["assigned_role"].choices = [
-            (value, label) for value, label in User.Role.choices if value in allowed_roles
-        ]
-        self.fields["assigned_role"].label = "Assign Role"

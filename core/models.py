@@ -139,3 +139,30 @@ class ProjectAssignment(models.Model):
         if self.assigned_role:
             return f"{self.project} -> {self.get_assigned_role_display()}"
         return f"{self.project} -> Unassigned"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
+    )
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_notifications",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Notification({self.user_id}, read={self.is_read})"

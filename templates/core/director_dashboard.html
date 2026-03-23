@@ -16,37 +16,31 @@
         <div class="director-content">
             {% include "core/topbar.html" with page_title="Dashboard" %}
 
-            {% if show_project_end_popup %}
-            <section class="reminder-banner" id="project-end-reminder">
+            {% if overdue_projects %}
+            <section class="reminder-banner" id="project-deadline-reminder">
                 <div class="reminder-icon">!</div>
                 <div class="reminder-body">
-                    <div class="reminder-title">Reminder!</div>
+                    <div class="reminder-title">Project Deadline Reminder</div>
                     <p>
-                        Project end date reached for {{ project_end_count }} project{{ project_end_count|pluralize }}.
+                        {{ overdue_count }} project{{ overdue_count|pluralize }} overdue (end date reached).
                         Please review and update status.
                     </p>
-                    {% if project_end_items %}
+                    {% if overdue_items %}
                     <div class="reminder-meta">
-                        {% for project in project_end_items %}
-                            <a class="reminder-link" href="{% url 'project_detail' project.id %}">
+                        {% for project in overdue_items %}
+                            <a class="reminder-link" href="{% url 'project_edit' project.id %}">
                                 #{{ project.serial_number }} {{ project.initiative_scheme_project_portal }} ({{ project.end|date:"d M Y" }})
                             </a>
                         {% endfor %}
-                        {% if project_end_more %}
-                            <span>and {{ project_end_more }} more.</span>
+                        {% if overdue_more %}
+                            <span>and {{ overdue_more }} more.</span>
                         {% endif %}
                     </div>
                     {% endif %}
                 </div>
                 <div class="reminder-actions">
-                    <span class="reminder-date">{{ project_end_today }}</span>
-                    {% if project_end_primary %}
-                        <a class="reminder-action-btn" href="{% url 'project_detail' project_end_primary.id %}">View Project</a>
-                    {% endif %}
-                    <form method="post" action="{% url 'dismiss_project_end_banner' %}">
-                        {% csrf_token %}
-                        <button class="reminder-dismiss" type="submit">Ok</button>
-                    </form>
+                    <span class="reminder-date">{{ overdue_today|date:"d M Y" }}</span>
+                    <a class="reminder-action-btn" href="{% url 'view_projects' %}">View Projects</a>
                 </div>
             </section>
             {% endif %}

@@ -46,6 +46,11 @@
                         <div>
                             <label for="{{ form.assigned_to.id_for_label }}">User Email</label>
                             {{ form.assigned_to }}
+                            <datalist id="userSuggestions">
+                                {% for u in user_suggestions %}
+                                    <option value="{{ u.email }}">{{ u.email }} ({{ u.role }})</option>
+                                {% endfor %}
+                            </datalist>
                             {{ form.assigned_to.errors }}
                         </div>
                     </div>
@@ -68,6 +73,10 @@
             const input = document.getElementById("id_search_project");
             if (input) {
                 input.setAttribute("list", "projectSuggestions");
+            }
+            const userEmail = document.getElementById("id_assigned_to");
+            if (userEmail) {
+                userEmail.setAttribute("list", "userSuggestions");
             }
         })();
     </script>

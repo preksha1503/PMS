@@ -1,15 +1,20 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.db.models import Q
+from django.http import HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .forms import AssignProjectForm, LoginForm, ProjectForm, SignupForm
-from .models import Project, ProjectAssignment, RoleRequest, User
+from .models import Notification, Project, ProjectAssignment, RoleRequest, User
 
 
 def uses_director_ui(user):
@@ -87,6 +92,7 @@ def to_int_or_default(value, default=0):
 def import_projects_from_excel(uploaded_file, created_by):
     try:
         from openpyxl import load_workbook
+        from openpyxl.utils.datetime import from_excel
     except ModuleNotFoundError as exc:
         raise RuntimeError("openpyxl is not installed.") from exc
 
@@ -94,33 +100,191 @@ def import_projects_from_excel(uploaded_file, created_by):
     ws = wb.active
     imported = 0
     updated = 0
+    skipped = 0
 
-    for row in ws.iter_rows(min_row=3, values_only=True):
+    from datetime import date as date_type
+    from datetime import datetime
+
+    def normalize_header(value):
+        text = (str(value) if value is not None else "").strip().lower()
+        if not text:
+            return ""
+        keep = []
+        for ch in text:
+            if ch.isalnum():
+                keep.append(ch)
+            elif ch in {" ", "/", "-", "_", "."}:
+                keep.append(" ")
+        return " ".join("".join(keep).split())
+
+    header_aliases = {
+        "serial_number": {"s no", "sno", "serial number", "serial", "project code", "projectcode", "code", "s no."},
+        "website_url": {"website url", "website", "url", "websiteurl"},
+        "stakeholder_ministry": {"stakeholder ministry", "ministry"},
+        "stakeholder_department": {"stakeholder department", "department"},
+        "stakeholder_state": {"stakeholder state", "state"},
+        "stakeholder_state_ministry_department": {"stakeholder state ministry department", "state ministry department", "state ministry/department"},
+        "stakeholder_organization": {"stakeholder organization", "organization"},
+        "initiative_scheme_project_portal": {"initiative scheme project portal", "initiative", "project name", "project portal"},
+        "genesis": {"genesis"},
+        "year": {"year"},
+        "project_manager_gis": {"project manager gis", "project manager - gis", "pm gis", "gis"},
+        "project_manager_sw_mobi": {"project manager s w mobi", "project manager sw mobi", "project manager - s w mobi", "pm sw mobi", "sw mobi"},
+        "start": {"start", "start date", "startdate"},
+        "end": {"end", "end date", "enddate"},
+        "status": {"status"},
+    }
+
+    def classify_header(cell_value):
+        norm = normalize_header(cell_value)
+        if not norm:
+            return None
+        for key, aliases in header_aliases.items():
+            if norm in aliases:
+                return key
+        if "s no" in norm or "serial" in norm or "project code" in norm:
+            return "serial_number"
+        if "website" in norm and "url" in norm:
+            return "website_url"
+        if norm.startswith("website") or norm == "url":
+            return "website_url"
+        if "start" in norm and "date" in norm:
+            return "start"
+        if "end" in norm and "date" in norm:
+            return "end"
+        if norm == "project":
+            return "initiative_scheme_project_portal"
+        return None
+
+    def as_date(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date_type):
+            return value
+        if isinstance(value, (int, float)):
+            try:
+                return from_excel(value).date()
+            except Exception:
+                return None
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            for fmt in (
+                "%Y-%m-%d",
+                "%d-%m-%Y",
+                "%d/%m/%Y",
+                "%d %b %Y",
+                "%d %B %Y",
+                "%b %d, %Y",
+                "%B %d, %Y",
+            ):
+                try:
+                    return datetime.strptime(text, fmt).date()
+                except ValueError:
+                    continue
+        return None
+
+    # Discover header row/column positions (supports title/group rows above headers).
+    header_row_index = None
+    col_map = {}
+    best_score = -1
+
+    header_rows = list(ws.iter_rows(min_row=1, max_row=30, values_only=True))
+
+    def candidates_for(header_cells):
+        candidates = {}
+        for col_index, cell_value in enumerate(header_cells or []):
+            key = classify_header(cell_value)
+            if key and key not in candidates:
+                candidates[key] = col_index
+        return candidates
+
+    for idx, row in enumerate(header_rows):
+        # Single-row header
+        cand = candidates_for(row)
+        if {"serial_number", "website_url"}.issubset(set(cand)):
+            score = len(cand)
+            if score > best_score:
+                best_score = score
+                header_row_index = idx + 1
+                col_map = cand
+
+        # Two-row (group + subheader) header
+        if idx + 1 < len(header_rows):
+            next_row = header_rows[idx + 1] or ()
+            max_len = max(len(row or ()), len(next_row))
+            combined = []
+            for col in range(max_len):
+                top = (row[col] if row and col < len(row) else "") or ""
+                bottom = (next_row[col] if col < len(next_row) else "") or ""
+                combined.append(f"{top} {bottom}".strip())
+            cand2 = candidates_for(combined)
+            if {"serial_number", "website_url"}.issubset(set(cand2)):
+                score = len(cand2)
+                if score > best_score:
+                    best_score = score
+                    header_row_index = idx + 2
+                    col_map = cand2
+
+    if header_row_index is None:
+        raise RuntimeError(
+            "Could not find the header row. Please ensure the file contains 'S.No.' and 'Website URL' columns."
+        )
+
+    def get_cell(row, key, default=None):
+        idx = col_map.get(key)
+        if idx is None:
+            return default
+        if idx >= len(row):
+            return default
+        return row[idx]
+
+    def add_text(defaults, field_name, key_name):
+        if key_name not in col_map:
+            return
+        defaults[field_name] = (str(get_cell(row, key_name) or "")).strip()
+
+    def add_int(defaults, field_name, key_name, fallback):
+        if key_name not in col_map:
+            return
+        defaults[field_name] = to_int_or_default(get_cell(row, key_name), fallback)
+
+    # Read rows after header.
+    for row in ws.iter_rows(min_row=header_row_index + 1, values_only=True):
         if not row or all(cell is None or str(cell).strip() == "" for cell in row):
             continue
 
-        serial_number = to_int_or_default(row[0], 0)
-        website_url = (row[1] or "").strip() if row[1] else ""
+        serial_number = to_int_or_default(get_cell(row, "serial_number"), 0)
+        website_url_value = get_cell(row, "website_url")
+        website_url = (str(website_url_value).strip() if website_url_value is not None else "")
         if not serial_number or not website_url:
+            skipped += 1
             continue
 
-        defaults = {
-            "website_url": website_url,
-            "stakeholder_ministry": (row[2] or "").strip() if row[2] else "",
-            "stakeholder_department": (row[3] or "").strip() if row[3] else "",
-            "stakeholder_state": (row[4] or "").strip() if row[4] else "",
-            "stakeholder_state_ministry_department": (row[5] or "").strip() if row[5] else "",
-            "stakeholder_organization": (row[6] or "").strip() if row[6] else "",
-            "initiative_scheme_project_portal": (row[7] or "").strip() if row[7] else "",
-            "genesis": (row[8] or "").strip() if row[8] else "",
-            "year": to_int_or_default(row[9], timezone.now().year),
-            "project_manager_gis": (row[10] or "").strip() if row[10] else "",
-            "project_manager_sw_mobi": (row[11] or "").strip() if row[11] else "",
-            "start": row[12] if row[12] else timezone.now().date(),
-            "end": row[13] if row[13] else timezone.now().date(),
-            "status": (row[14] or "Pending").strip() if row[14] else "Pending",
-            "created_by": created_by,
-        }
+        start_date = as_date(get_cell(row, "start"))
+        end_date = as_date(get_cell(row, "end"))
+        defaults = {"website_url": website_url, "created_by": created_by}
+        add_text(defaults, "stakeholder_ministry", "stakeholder_ministry")
+        add_text(defaults, "stakeholder_department", "stakeholder_department")
+        add_text(defaults, "stakeholder_state", "stakeholder_state")
+        add_text(defaults, "stakeholder_state_ministry_department", "stakeholder_state_ministry_department")
+        add_text(defaults, "stakeholder_organization", "stakeholder_organization")
+        add_text(defaults, "initiative_scheme_project_portal", "initiative_scheme_project_portal")
+        add_text(defaults, "genesis", "genesis")
+        defaults["year"] = to_int_or_default(get_cell(row, "year"), timezone.now().year)
+        add_text(defaults, "project_manager_gis", "project_manager_gis")
+        add_text(defaults, "project_manager_sw_mobi", "project_manager_sw_mobi")
+        defaults["start"] = start_date or timezone.now().date()
+        defaults["end"] = end_date or timezone.now().date()
+        if "status" in col_map:
+            defaults["status"] = (str(get_cell(row, "status") or "Pending")).strip() or "Pending"
+        else:
+            defaults["status"] = "Pending"
+        if not (defaults.get("initiative_scheme_project_portal") or "").strip():
+            defaults["initiative_scheme_project_portal"] = f"Project {serial_number}"
         _, was_created = Project.objects.update_or_create(
             serial_number=serial_number,
             defaults=defaults,
@@ -129,6 +293,11 @@ def import_projects_from_excel(uploaded_file, created_by):
             imported += 1
         else:
             updated += 1
+
+    if imported == 0 and updated == 0 and skipped:
+        raise RuntimeError(
+            "No rows were imported. Please ensure each row has 'S.No.' (or Project Code) and 'Website URL' filled."
+        )
 
     return imported, updated
 
@@ -171,6 +340,13 @@ def dashboard_view(request):
     total_projects = projects.count()
     total_users = User.objects.count()
     month_label = timezone.now().strftime("%b %Y")
+    today = timezone.localdate()
+
+    overdue_projects = list(Project.objects.filter(end__lte=today).order_by("end", "serial_number"))
+    overdue_projects = [p for p in overdue_projects if normalize_status(p.status) != "completed"]
+    overdue_count = len(overdue_projects)
+    overdue_items = overdue_projects[:5]
+    overdue_more = max(0, overdue_count - len(overdue_items))
 
     def percent(count):
         if total_projects == 0:
@@ -182,7 +358,7 @@ def dashboard_view(request):
         ("in_progress", "#f2c01f", percent(status_counts["in_progress"])),
         ("completed", "#5fcb85", percent(status_counts["completed"])),
         ("on_hold", "#ec6e6e", percent(status_counts["on_hold"])),
-        ("planning", "#94a0b5", percent(status_counts["planning"])),
+        ("planning", "rgba(139,92,246,0.6)", percent(status_counts["planning"])),
     ]
     if total_projects == 0:
         pie_style = ""
@@ -215,6 +391,11 @@ def dashboard_view(request):
             "pie_empty": total_projects == 0,
             "bar_heights": bar_heights,
             "month_label": month_label,
+            "overdue_projects": overdue_projects,
+            "overdue_count": overdue_count,
+            "overdue_items": overdue_items,
+            "overdue_more": overdue_more,
+            "overdue_today": today,
         },
     )
 
@@ -241,7 +422,7 @@ def super_admin_dashboard_view(request):
         ("in_progress", "#f2c01f", percent(status_counts["in_progress"])),
         ("completed", "#5fcb85", percent(status_counts["completed"])),
         ("on_hold", "#ec6e6e", percent(status_counts["on_hold"])),
-        ("planning", "#94a0b5", percent(status_counts["planning"])),
+        ("planning", "rgba(139,92,246,0.6)", percent(status_counts["planning"])),
     ]
     if total_projects == 0:
         pie_style = ""
@@ -411,6 +592,14 @@ def project_edit_view(request, project_id):
 
 
 @login_required
+def project_detail_view(request, project_id):
+    if request.user.role == User.Role.PENDING:
+        return redirect("role_request")
+    project = get_object_or_404(Project, id=project_id)
+    return render(request, "core/director_project_detail.html", {"project": project})
+
+
+@login_required
 def project_delete_view(request, project_id):
     if not request.user.can_manage_projects():
         return redirect("dashboard")
@@ -468,17 +657,29 @@ def _assign_page_handler(request, active_page, page_title):
             if not project:
                 form.add_error("search_project", "Project not found. Use exact serial number or select from suggestions.")
             else:
-                ProjectAssignment.objects.update_or_create(
-                    project=project,
-                    assigned_role=form.cleaned_data["assigned_role"],
-                    defaults={
-                        "assigned_by": request.user,
-                        "notes": form.cleaned_data["notes"],
-                        "assigned_to": None,
-                    },
-                )
-                messages.success(request, "Project assigned successfully.")
-                return redirect(active_page)
+                assignee_email = (form.cleaned_data.get("assigned_to") or "").strip().lower()
+                assignee = User.objects.filter(email__iexact=assignee_email).first()
+                if not assignee:
+                    form.add_error("assigned_to", "No user found with this email.")
+                else:
+                    ProjectAssignment.objects.update_or_create(
+                        project=project,
+                        assigned_to=assignee,
+                        defaults={
+                            "assigned_by": request.user,
+                            "notes": form.cleaned_data["notes"],
+                            "assigned_role": "",
+                        },
+                    )
+                    actor_label = request.user.get_role_display() if hasattr(request.user, "get_role_display") else "Admin"
+                    Notification.objects.create(
+                        user=assignee,
+                        project=project,
+                        created_by=request.user,
+                        message=f"{actor_label} assigned you a new project: {project.initiative_scheme_project_portal}",
+                    )
+                    messages.success(request, "Project assigned successfully.")
+                    return redirect(active_page)
     else:
         form = AssignProjectForm()
 
@@ -487,12 +688,18 @@ def _assign_page_handler(request, active_page, page_title):
         "initiative_scheme_project_portal",
         "stakeholder_organization",
     )
+    user_suggestions = User.objects.filter(is_active=True).exclude(email="").order_by("email").values(
+        "email",
+        "role",
+        "username",
+    )
     return render(
         request,
         "core/director_assign_project.html",
         {
             "form": form,
             "project_suggestions": project_suggestions,
+            "user_suggestions": user_suggestions,
             "active_page": active_page,
             "page_title": page_title,
         },
@@ -503,9 +710,20 @@ def _assign_page_handler(request, active_page, page_title):
 def view_projects_view(request):
     if request.user.role == User.Role.PENDING:
         return redirect("role_request")
+
     projects = Project.objects.all()
+    if request.user.role in {User.Role.DEVELOPER, User.Role.ASSISTANT_PROJECT_MANAGER} and not request.user.is_superuser:
+        assignment_filter = Q(assignments__assigned_to=request.user) | Q(assignments__assigned_role=request.user.role)
+        assigned_by_super_admin = Q(assignments__assigned_by__role=User.Role.SUPER_ADMIN) | Q(
+            assignments__assigned_by__is_superuser=True
+        )
+        projects = Project.objects.filter(
+            assignment_filter & assigned_by_super_admin
+        ).distinct()
+
     q = (request.GET.get("q") or "").strip()
     status_filter = (request.GET.get("status") or "").strip()
+    today = timezone.localdate()
 
     filtered_projects = projects
     if q:
@@ -527,6 +745,15 @@ def view_projects_view(request):
         filtered_projects = list(filtered_projects)
 
     status_counts = get_status_counts(projects)
+
+    reminder_window_days = 7
+    due_soon_cutoff = today + timedelta(days=reminder_window_days)
+    due_soon_projects = list(projects.filter(end__gte=today, end__lte=due_soon_cutoff).order_by("end", "serial_number"))
+    due_soon_projects = [p for p in due_soon_projects if normalize_status(p.status) != "completed"]
+    due_soon_count = len(due_soon_projects)
+    due_soon_items = due_soon_projects[:5]
+    due_soon_more = max(0, due_soon_count - len(due_soon_items))
+    due_soon_primary = due_soon_items[0] if due_soon_items else None
     return render(
         request,
         "core/director_view_projects.html",
@@ -538,8 +765,134 @@ def view_projects_view(request):
             "q": q,
             "status_filter": status_filter,
             "can_manage": request.user.can_manage_projects(),
+            "due_soon_projects": due_soon_projects,
+            "due_soon_count": due_soon_count,
+            "due_soon_items": due_soon_items,
+            "due_soon_more": due_soon_more,
+            "due_soon_primary": due_soon_primary,
+            "due_soon_today": today,
+            "due_soon_cutoff": due_soon_cutoff,
+            "due_soon_window_days": reminder_window_days,
         },
     )
+
+
+@login_required
+def projects_download_excel_view(request):
+    if request.user.role == User.Role.PENDING:
+        return redirect("role_request")
+
+    q = (request.GET.get("q") or "").strip()
+    status_filter = (request.GET.get("status") or "").strip()
+
+    projects = Project.objects.all()
+    if request.user.role in {User.Role.DEVELOPER, User.Role.ASSISTANT_PROJECT_MANAGER} and not request.user.is_superuser:
+        assignment_filter = Q(assignments__assigned_to=request.user) | Q(assignments__assigned_role=request.user.role)
+        assigned_by_super_admin = Q(assignments__assigned_by__role=User.Role.SUPER_ADMIN) | Q(
+            assignments__assigned_by__is_superuser=True
+        )
+        projects = Project.objects.filter(
+            assignment_filter & assigned_by_super_admin
+        ).distinct()
+    filtered_projects = projects
+    if q:
+        query_filter = (
+            Q(initiative_scheme_project_portal__icontains=q)
+            | Q(stakeholder_ministry__icontains=q)
+            | Q(stakeholder_department__icontains=q)
+            | Q(stakeholder_state__icontains=q)
+            | Q(stakeholder_organization__icontains=q)
+            | Q(project_manager_gis__icontains=q)
+            | Q(project_manager_sw_mobi__icontains=q)
+        )
+        if q.isdigit():
+            query_filter = query_filter | Q(serial_number=int(q))
+        filtered_projects = filtered_projects.filter(query_filter)
+
+    filtered_projects = list(filtered_projects)
+    if status_filter:
+        filtered_projects = [p for p in filtered_projects if normalize_status(p.status) == status_filter]
+
+    try:
+        from openpyxl import Workbook
+    except ModuleNotFoundError:
+        return HttpResponse(
+            "openpyxl is not installed. Install it with: pip install openpyxl",
+            status=500,
+            content_type="text/plain",
+        )
+
+    from io import BytesIO
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Projects"
+
+    ws.append(["Projects Export"])
+    ws.append(
+        [
+            "S.No.",
+            "Website URL",
+            "Stakeholder - Ministry",
+            "Stakeholder - Department",
+            "Stakeholder - State",
+            "Stakeholder - State Ministry/Department",
+            "Stakeholder - Organization",
+            "Initiative/Scheme/Project Portal",
+            "Genesis",
+            "Year",
+            "Project Manager - GIS",
+            "Project Manager - S/W & Mobi",
+            "Start",
+            "End",
+            "Status",
+        ]
+    )
+
+    for project in filtered_projects:
+        ws.append(
+            [
+                project.serial_number,
+                project.website_url,
+                project.stakeholder_ministry,
+                project.stakeholder_department,
+                project.stakeholder_state,
+                project.stakeholder_state_ministry_department,
+                project.stakeholder_organization,
+                project.initiative_scheme_project_portal,
+                project.genesis,
+                project.year,
+                project.project_manager_gis,
+                project.project_manager_sw_mobi,
+                project.start,
+                project.end,
+                project.status,
+            ]
+        )
+
+    ws.freeze_panes = "A3"
+
+    date_format = "DD-MMM-YYYY"
+    for row in ws.iter_rows(min_row=3, min_col=13, max_col=14):
+        for cell in row:
+            if cell.value:
+                cell.number_format = date_format
+
+    ws.column_dimensions["M"].width = 14
+    ws.column_dimensions["N"].width = 14
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    timestamp = timezone.localtime(timezone.now()).strftime("%Y%m%d_%H%M%S")
+    filename = f"projects_{timestamp}.xlsx"
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
@@ -557,9 +910,12 @@ def excel_entry_view(request):
             try:
                 imported, updated = import_projects_from_excel(upload, request.user)
                 messages.success(request, f"Import complete. Added {imported} and updated {updated} projects.")
-                return redirect("excel_entry")
+                return redirect("view_projects")
             except RuntimeError as exc:
-                messages.error(request, f"{exc} Install it with: pip install openpyxl")
+                message = str(exc)
+                if "openpyxl" in message.lower() and "not installed" in message.lower():
+                    message = f"{message} Install it with: pip install openpyxl"
+                messages.error(request, message)
             except Exception:
                 messages.error(request, "Could not import this file. Please verify the sheet format.")
 
@@ -702,6 +1058,25 @@ def chat_view(request):
 
 @login_required
 def notifications_view(request):
-    return render(request, "core/director_notifications.html")
+    notifications = Notification.objects.filter(user=request.user).select_related("project", "created_by")
+    return render(request, "core/director_notifications.html", {"notifications": notifications})
+
+
+@login_required
+@require_POST
+def notification_read_view(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=["is_read"])
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({"ok": True, "unread_count": unread_count})
+
+
+@login_required
+@require_POST
+def notifications_read_all_view(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({"ok": True, "unread_count": 0})
 
 

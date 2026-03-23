@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Project, ProjectAssignment, User
+from .models import Notification, Project, ProjectAssignment, User
 
 
 @admin.register(User)
@@ -38,4 +38,11 @@ class ProjectAdmin(admin.ModelAdmin):
 class ProjectAssignmentAdmin(admin.ModelAdmin):
     list_display = ("project", "assigned_to", "assigned_by", "assigned_at")
     search_fields = ("project__initiative_scheme_project_portal", "assigned_to__username", "assigned_by__username")
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "project", "is_read", "created_by", "created_at")
+    list_filter = ("is_read", "created_at")
+    search_fields = ("user__email", "message", "project__initiative_scheme_project_portal")
 

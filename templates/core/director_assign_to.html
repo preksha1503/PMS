@@ -1,4 +1,5 @@
 {% load static %}
+{% load status_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +62,11 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item.assigned_by.username }}</td>
-                                    <td><span class="status-pill">{{ item.project.status }}</span></td>
+                                    <td>
+                                        <span class="status-pill {{ item.project.status|status_pill_class }}">
+                                            {{ item.project.status|status_label }}
+                                        </span>
+                                    </td>
                                     <td>{{ item.project.start }}</td>
                                     <td>{{ item.project.end }}</td>
                                     <td>{{ item.notes|default:"-" }}</td>
